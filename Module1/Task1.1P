@@ -1,0 +1,54 @@
+//Sense-Think-Act Board - Task M1.T1P
+//By:
+//Josh J
+
+//creates constant integer variables
+const int hotTemp = 80;
+
+const int coldTemp = 5;
+
+void setup()
+{
+  pinMode(A0, INPUT); //temperature sensor
+  pinMode(2, OUTPUT);	//dc motor
+  pinMode(3, OUTPUT);	//led red
+  pinMode(4, OUTPUT); //led blue
+  Serial.begin(9600);
+}
+
+void loop()
+{
+  
+  int tempSense = analogRead(A0);	//sets the temperature sensor to the A0 port on the Arduino
+  
+  //calculations below inspired by Arduino Project Hub. (n.d.). Arduino LED Temperature Indicator. [online] Available at: https://create.arduino.cc/projecthub/luca-mcloughlin/arduino-led-temperature-indicator-6874d9 [Accessed 16 Jul. 2021].
+  float tempVoltage = (tempSense / 1024.0) * 5.0;	//sets the value of the voltage
+  float tempInCelcius = (tempVoltage - .5) * 100;	//calculates temperature in Celcius 
+  
+  Serial.print("The temperature in Celcius is: ");	//prints the current temperature in celcius
+  Serial.println(tempInCelcius);
+  
+  if (tempInCelcius <= coldTemp) {
+    digitalWrite(2, HIGH); //makes dc motor spin at low speed
+    digitalWrite(3, LOW); //turns red led off
+    digitalWrite(4, HIGH); //turns blue led on
+    Serial.println("COLD TEMPERATURE");
+  }
+  else if (tempInCelcius >= hotTemp) {
+    digitalWrite(2, LOW); //makes dc motor spin at high speed
+    digitalWrite(3, HIGH); //turns red led on
+    digitalWrite(4, LOW); //turns blue led off
+    Serial.println("HOT TEMPERATURE");
+  }
+  else if (tempInCelcius > coldTemp && tempInCelcius < hotTemp) {
+    digitalWrite(2, HIGH); //makes dc motor spin at low speed
+    digitalWrite(3, HIGH); //turns red led on
+    digitalWrite(4, HIGH); //turns blue led on
+    Serial.println("MEDIUM TEMPERATURE");
+  }
+  
+  digitalWrite(3, LOW);	//turns red led off
+  digitalWrite(4, LOW); //turns blue led off
+  
+  delay(20);
+}
