@@ -1,0 +1,202 @@
+//More-Inputs-Timer Board - Task M1.T4D
+//By:
+//Josh J
+
+//elements of timer interrupt code from SparkFun Electronics (2018). Level Up Your Arduino Code: Timer Interrupts. [online] Available at: https://youtu.be/2kr5A350H7E [Accessed 18 Jul. 2021].
+
+
+//creates constant integer variables
+const int hotTemp = 80;
+
+const int coldTemp = 5;
+
+const int interruptLed = PB5;
+
+const uint16_t tl_load = 0;
+
+const uint16_t tl_comp = 65535;
+
+//creates variables
+int lightValue = 500;
+
+int tooClose = 0;
+
+int tooFar = 0;
+
+int comfortableDistance = 0;
+
+long distanceCm = 0;
+
+long pingTime = 0;
+
+bool onOff = false;
+
+
+
+long distanceMeasurement(long timeInMicroseconds) {
+
+  //calculation found from Deo (2018). Circuit design Ultrasonic distance sensor. [online] Available at: https://www.tinkercad.com/things/9AzmS567fJN-ultrasonic-distance-sensor [Accessed 18 Jul. 2021].
+  return timeInMicroseconds / 29 / 2;
+  
+}  
+
+
+
+
+void setup()
+{
+  pinMode(A0, INPUT); //temperature sensor
+  pinMode(A1, INPUT); //photoresistor
+  pinMode(4, OUTPUT);	//dc motor
+  pinMode(5, OUTPUT);	//led red
+  pinMode(6, OUTPUT); //led blue
+  pinMode(7, OUTPUT); //interrupt led
+  pinMode(8, OUTPUT); //photoresistor led
+  pinMode(2, INPUT_PULLUP); //interrupt button
+  
+  attachInterrupt(digitalPinToInterrupt(2), toggle, FALLING);
+  
+  //timer interrupt setup
+  DDRB |= (1 << interruptLed);
+  
+  TCCR1A = 0;
+  
+  TCCR1B &= ~(1 << WGM13);
+  TCCR1B |= (1 << WGM12);
+   
+  TCCR1B |= (1 << CS12);
+  TCCR1B &= ~(1 << CS11);
+  TCCR1B &= ~(1 << CS10);
+  
+  TCNT1 = tl_load;
+  
+  OCR1A = tl_comp;
+  
+  TIMSK1 = (1 << OCIE1A);
+  
+  sei();
+  
+  
+  Serial.begin(9600);
+}
+
+
+void loop()
+{
+  tooClose = 100;
+  
+  tooFar = 300;
+  
+  comfortableDistance = 120; 
+  
+  int tempSense = analogRead(A0);	//sets the temperature sensor to the A0 port on the Arduino
+  int photoSense = analogRead(A1); //sets the photoresistor sensor to the A1 port on the Arduino
+  
+  //calculations below inspired by Arduino Project Hub. (n.d.). Arduino LED Temperature Indicator. [online] Available at: https://create.arduino.cc/projecthub/luca-mcloughlin/arduino-led-temperature-indicator-6874d9 [Accessed 16 Jul. 2021].
+  float tempVoltage = (tempSense / 1024.0) * 5.0;	//sets the value of the voltage
+  float tempInCelsius = (tempVoltage - .5) * 100;	//calculates temperature in Celsius 
+  
+  
+	
+  if (onOff == false && PORTB != (1 << interruptLed)) {
+  Serial.print("The temperature in Celsius is: ");	//prints the current temperature in celsius
+  Serial.println(tempInCelsius);
+    
+  Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
+  Serial.println(photoSense);
+    
+   	if (tempInCelsius <= coldTemp) {
+      digitalWrite(4, HIGH); //makes dc motor spin at low speed
+      digitalWrite(5, LOW); //turns red led off
+      digitalWrite(6, HIGH); //turns blue led on
+      Serial.println("COLD TEMPERATURE");
+  	}
+    else if (tempInCelsius >= hotTemp) {
+      digitalWrite(4, LOW); //makes dc motor spin at high speed
+      digitalWrite(5, HIGH); //turns red led on
+      digitalWrite(6, LOW); //turns blue led off
+      Serial.println("HOT TEMPERATURE");
+    }
+    else if (tempInCelsius > coldTemp && tempInCelsius < hotTemp) {
+      digitalWrite(4, HIGH); //makes dc motor spin at low speed
+      digitalWrite(5, HIGH); //turns red led on
+      digitalWrite(6, HIGH); //turns blue led on
+      Serial.println("MEDIUM TEMPERATURE");
+    }
+    
+    if (photoSense >= 500) {
+      digitalWrite(8, HIGH);
+    }
+    else 
+    {
+      digitalWrite(8, LOW);
+    }
+    
+    //ultrasonic distance sensor
+    pinMode(3, OUTPUT);  
+    digitalWrite(3, LOW);
+    delayMicroseconds(1);
+    digitalWrite(3, HIGH);
+    delayMicroseconds(5);
+    digitalWrite(3, LOW);
+    pinMode(3, INPUT);
+    pingTime = pulseIn(3, HIGH);
+	
+    distanceCm = distanceMeasurement(pingTime);
+    
+    
+    if (distanceCm <= tooClose) {
+      Serial.println("OBJECT IS TOO CLOSE");
+    }
+    else if (distanceCm >= comfortableDistance && distanceCm < tooFar) {
+     
+      Serial.println("OBJECT IS AT IDEAL DISTANCE");
+    }
+    else if (distanceCm >= tooFar) {
+     
+      Serial.println("OBJECT IS OUT OF RANGE");
+    }
+    
+    
+  }
+    
+}
+
+
+ISR(TIMER1_COMPA_vect) {
+  Serial.println("TIMER INTERRUPT ACTIVATED");
+  
+  if (PORTB ^= (1 << interruptLed)) {
+    digitalWrite(4, HIGH);
+    digitalWrite(5, LOW);
+    digitalWrite(6, LOW);
+  	digitalWrite(8, LOW);
+  }
+  else 
+  {
+    digitalWrite(4, LOW);
+  }
+  
+}
+
+
+//when the interrupt button has been pressed
+void toggle() { 
+  if(onOff == false)
+ { 
+  digitalWrite(7, HIGH); //turns interrupt led on
+   digitalWrite(4, HIGH); //spins dc motor at low speed
+    Serial.println("The program has been interrupted");
+
+  onOff = true;
+}
+ else
+ { 
+   digitalWrite(7, LOW); //turns interrupt led off
+  digitalWrite(4, LOW); //spins dc motor at speed according to that of the temperature sensor
+   digitalWrite(8, LOW); //turns photoresistor led off
+
+   onOff = false;
+ }
+  
+}
