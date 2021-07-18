@@ -48,19 +48,19 @@ void loop()
   Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
   Serial.println(photoSense);
     
-   	if (tempInCelcius <= coldTemp) {
+   	if (tempInCelsius <= coldTemp) {
       digitalWrite(4, HIGH); //makes dc motor spin at low speed
       digitalWrite(5, LOW); //turns red led off
       digitalWrite(6, HIGH); //turns blue led on
       Serial.println("COLD TEMPERATURE");
   	}
-    else if (tempInCelcius >= hotTemp) {
+    else if (tempInCelsius >= hotTemp) {
       digitalWrite(4, LOW); //makes dc motor spin at high speed
       digitalWrite(5, HIGH); //turns red led on
       digitalWrite(6, LOW); //turns blue led off
       Serial.println("HOT TEMPERATURE");
     }
-    else if (tempInCelcius > coldTemp && tempInCelcius < hotTemp) {
+    else if (tempInCelsius > coldTemp && tempInCelsius < hotTemp) {
       digitalWrite(4, HIGH); //makes dc motor spin at low speed
       digitalWrite(5, HIGH); //turns red led on
       digitalWrite(6, HIGH); //turns blue led on
