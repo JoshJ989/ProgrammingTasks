@@ -37,30 +37,30 @@ void loop()
   
   //calculations below inspired by Arduino Project Hub. (n.d.). Arduino LED Temperature Indicator. [online] Available at: https://create.arduino.cc/projecthub/luca-mcloughlin/arduino-led-temperature-indicator-6874d9 [Accessed 16 Jul. 2021].
   float tempVoltage = (tempSense / 1024.0) * 5.0;	//sets the value of the voltage
-  float tempInCelsius = (tempVoltage - .5) * 100;	//calculates temperature in Celsius 
+  float tempInCelcius = (tempVoltage - .5) * 100;	//calculates temperature in Celsius 
   
   
 	
   if (onOff == false) {
-  Serial.print("The temperature in Celsius is: ");	//prints the current temperature in celsius
-  Serial.println(tempInCelsius);
+  Serial.print("The temperature in Celcius is: ");	//prints the current temperature in celcius
+  Serial.println(tempInCelcius);
     
   Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
   Serial.println(photoSense);
     
-   	if (tempInCelsius <= coldTemp) {
+   	if (tempInCelcius <= coldTemp) {
       digitalWrite(4, HIGH); //makes dc motor spin at low speed
       digitalWrite(5, LOW); //turns red led off
       digitalWrite(6, HIGH); //turns blue led on
       Serial.println("COLD TEMPERATURE");
   	}
-    else if (tempInCelsius >= hotTemp) {
+    else if (tempInCelcius >= hotTemp) {
       digitalWrite(4, LOW); //makes dc motor spin at high speed
       digitalWrite(5, HIGH); //turns red led on
       digitalWrite(6, LOW); //turns blue led off
       Serial.println("HOT TEMPERATURE");
     }
-    else if (tempInCelsius > coldTemp && tempInCelsius < hotTemp) {
+    else if (tempInCelcius > coldTemp && tempInCelcius < hotTemp) {
       digitalWrite(4, HIGH); //makes dc motor spin at low speed
       digitalWrite(5, HIGH); //turns red led on
       digitalWrite(6, HIGH); //turns blue led on
@@ -74,6 +74,11 @@ void loop()
     {
       digitalWrite(8, LOW);
     }
+  
+  
+  digitalWrite(5, LOW);
+  digitalWrite(6, LOW);
+  digitalWrite(8, LOW);
   
   delay(20);
     
