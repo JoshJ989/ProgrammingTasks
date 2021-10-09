@@ -12,6 +12,9 @@ int lightValue = 500;
 
 bool onOff = false;
 
+bool ldrOnOff = false;
+
+
 
 void setup()
 {
@@ -22,9 +25,13 @@ void setup()
   pinMode(6, OUTPUT); //led blue
   pinMode(7, OUTPUT); //interrupt led
   pinMode(8, OUTPUT); //photoresistor led
+  pinMode(9, OUTPUT); //photoresistor interrupt led
   pinMode(2, INPUT_PULLUP); //button
+  pinMode(3, INPUT_PULLUP); //button
   
-  attachInterrupt(digitalPinToInterrupt(2), toggle, FALLING);
+  attachInterrupt(digitalPinToInterrupt(2), toggle_temp, FALLING);
+  
+  attachInterrupt(digitalPinToInterrupt(3), toggle_ldr, FALLING);
   
   Serial.begin(9600);
 }
@@ -36,13 +43,12 @@ void loop()
 }
 
 //when the interrupt button has been pressed
-void toggle() { 
+void toggle_temp() { 
   if(!onOff)
  { 
   
     digitalWrite(7, LOW);
     int tempSense = analogRead(A0);	//sets the temperature sensor to the A0 port on the Arduino
-    int photoSense = analogRead(A1); //sets the photoresistor sensor to the A1 port on the Arduino
 
     //calculations below inspired by Arduino Project Hub. (n.d.). Arduino LED Temperature Indicator. [online] Available at: https://create.arduino.cc/projecthub/luca-mcloughlin/arduino-led-temperature-indicator-6874d9 [Accessed 16 Jul. 2021].
     float tempVoltage = (tempSense / 1024.0) * 5.0;	//sets the value of the voltage
@@ -51,8 +57,7 @@ void toggle() {
     Serial.print("The temperature in Celsius is: ");	//prints the current temperature in celcius
     Serial.println(tempInCelsius);
 
-    Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
-    Serial.println(photoSense);
+   
     
    	if (tempInCelsius <= coldTemp) {
       digitalWrite(4, HIGH); //makes dc motor spin at low speed
@@ -73,13 +78,6 @@ void toggle() {
       Serial.println("MEDIUM TEMPERATURE");
     }
     
-    if (photoSense >= 500) {
-      digitalWrite(8, HIGH);
-    }
-    else 
-    {
-      digitalWrite(8, LOW);
-    }
 
   onOff = true;
 }
@@ -89,11 +87,38 @@ void toggle() {
    digitalWrite(4, HIGH); //spins dc motor at low speed
    digitalWrite(5, LOW);
    digitalWrite(6, LOW);
-   digitalWrite(8, LOW);
-   Serial.println("The program has been interrupted");
+   Serial.println("The temperature sensor has been interrupted");
    
    onOff = false; 
  }
   
 }
 
+void toggle_ldr() {
+	if (!ldrOnOff)
+	{
+        int photoSense = analogRead(A1); //sets the photoresistor sensor to the A1 port on the Arduino
+
+      	digitalWrite(9, LOW);
+       	Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
+    	Serial.println(photoSense);
+      
+		if (photoSense >= 500) {
+          digitalWrite(8, HIGH);
+    	}
+    	else if (photoSense < 500)
+    	{
+      		digitalWrite(8, LOW);
+    	}
+      
+      ldrOnOff = true;
+	}
+	else
+	{
+		digitalWrite(8, LOW);
+      	digitalWrite(9, HIGH);
+		Serial.println("The photoresistor has been interrupted");
+      
+      ldrOnOff = false;
+	}
+}
