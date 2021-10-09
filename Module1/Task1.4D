@@ -10,8 +10,6 @@ const int hotTemp = 80;
 
 const int coldTemp = 5;
 
-const int interruptLed = PB5;
-
 const uint16_t tl_load = 0;
 
 const uint16_t tl_comp = 65535;
@@ -29,8 +27,7 @@ long distanceCm = 0;
 
 long pingTime = 0;
 
-bool onOff = false;
-
+bool ultraOnOff = false;
 
 
 long distanceMeasurement(long timeInMicroseconds) {
@@ -41,8 +38,6 @@ long distanceMeasurement(long timeInMicroseconds) {
 }  
 
 
-
-
 void setup()
 {
   pinMode(A0, INPUT); //temperature sensor
@@ -50,14 +45,12 @@ void setup()
   pinMode(4, OUTPUT);	//dc motor
   pinMode(5, OUTPUT);	//led red
   pinMode(6, OUTPUT); //led blue
-  pinMode(7, OUTPUT); //interrupt led
+  pinMode(7, OUTPUT); //temperature sensor interrupt led
   pinMode(8, OUTPUT); //photoresistor led
-  pinMode(2, INPUT_PULLUP); //interrupt button
-  
-  attachInterrupt(digitalPinToInterrupt(2), toggle, FALLING);
+  pinMode(10, OUTPUT); //photoresistor interrupt led
   
   //timer interrupt setup
-  DDRB |= (1 << interruptLed);
+  DDRB |= (1 << PB5); 
   
   TCCR1A = 0;
   
@@ -74,73 +67,45 @@ void setup()
   
   TIMSK1 = (1 << OCIE1A);
   
-  sei();
+  	//pin change interrupt setup
+	DDRD &= ~(1 << DDD2) | (1 << DDD3); //sets digital pin 2 and 3 as inputs
+
+	PCICR |= (1 << PCIE2); //pin change interrupt 2
+
+	
+	PCMSK2 |= (1 << PCINT18) | (1 << PCINT19); //PCINT18 and PCINT19 (digital pins 2 and 3 on the Arduino)
   
+  
+  sei();
   
   Serial.begin(9600);
 }
 
+ISR(TIMER1_COMPA_vect) {
+  Serial.println("TIMER INTERRUPT ACTIVATED");
+    
+  if (ultraOnOff == false) {
+    PORTB ^= (1 << PB5);
+    
+    digitalWrite(7, LOW);
+    
+    
+    tooClose = 100;
+  
+    tooFar = 300;
 
-void loop()
-{
-  tooClose = 100;
-  
-  tooFar = 300;
-  
-  comfortableDistance = 120; 
-  
-  int tempSense = analogRead(A0);	//sets the temperature sensor to the A0 port on the Arduino
-  int photoSense = analogRead(A1); //sets the photoresistor sensor to the A1 port on the Arduino
-  
-  //calculations below inspired by Arduino Project Hub. (n.d.). Arduino LED Temperature Indicator. [online] Available at: https://create.arduino.cc/projecthub/luca-mcloughlin/arduino-led-temperature-indicator-6874d9 [Accessed 16 Jul. 2021].
-  float tempVoltage = (tempSense / 1024.0) * 5.0;	//sets the value of the voltage
-  float tempInCelsius = (tempVoltage - .5) * 100;	//calculates temperature in Celsius 
-  
-  
-	
-  if (onOff == false && PORTB != (1 << interruptLed)) {
-  Serial.print("The temperature in Celsius is: ");	//prints the current temperature in celsius
-  Serial.println(tempInCelsius);
+    comfortableDistance = 120; 
+
     
-  Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
-  Serial.println(photoSense);
-    
-   	if (tempInCelsius <= coldTemp) {
-      digitalWrite(4, HIGH); //makes dc motor spin at low speed
-      digitalWrite(5, LOW); //turns red led off
-      digitalWrite(6, HIGH); //turns blue led on
-      Serial.println("COLD TEMPERATURE");
-  	}
-    else if (tempInCelsius >= hotTemp) {
-      digitalWrite(4, LOW); //makes dc motor spin at high speed
-      digitalWrite(5, HIGH); //turns red led on
-      digitalWrite(6, LOW); //turns blue led off
-      Serial.println("HOT TEMPERATURE");
-    }
-    else if (tempInCelsius > coldTemp && tempInCelsius < hotTemp) {
-      digitalWrite(4, HIGH); //makes dc motor spin at low speed
-      digitalWrite(5, HIGH); //turns red led on
-      digitalWrite(6, HIGH); //turns blue led on
-      Serial.println("MEDIUM TEMPERATURE");
-    }
-    
-    if (photoSense >= 500) {
-      digitalWrite(8, HIGH);
-    }
-    else 
-    {
-      digitalWrite(8, LOW);
-    }
-    
-    //ultrasonic distance sensor
-    pinMode(3, OUTPUT);  
-    digitalWrite(3, LOW);
+  	//ultrasonic distance sensor
+    pinMode(9, OUTPUT);  
+    digitalWrite(9, LOW);
     delayMicroseconds(1);
-    digitalWrite(3, HIGH);
+    digitalWrite(9, HIGH);
     delayMicroseconds(5);
-    digitalWrite(3, LOW);
-    pinMode(3, INPUT);
-    pingTime = pulseIn(3, HIGH);
+    digitalWrite(9, LOW);
+    pinMode(9, INPUT);
+    pingTime = pulseIn(9, HIGH);
 	
     distanceCm = distanceMeasurement(pingTime);
     
@@ -156,47 +121,95 @@ void loop()
      
       Serial.println("OBJECT IS OUT OF RANGE");
     }
-    
-    
-  }
-    
-}
-
-
-ISR(TIMER1_COMPA_vect) {
-  Serial.println("TIMER INTERRUPT ACTIVATED");
-  
-  if (PORTB ^= (1 << interruptLed)) {
-    digitalWrite(4, HIGH);
+   
     digitalWrite(5, LOW);
-    digitalWrite(6, LOW);
-  	digitalWrite(8, LOW);
+  	digitalWrite(6, LOW);
+    digitalWrite(8, LOW);
+    digitalWrite(4, HIGH);
   }
-  else 
+  else
   {
-    digitalWrite(4, LOW);
+    ultraOnOff = true;
   }
   
-}
-
-
-//when the interrupt button has been pressed
-void toggle() { 
-  if(onOff == false)
- { 
-  digitalWrite(7, HIGH); //turns interrupt led on
-   digitalWrite(4, HIGH); //spins dc motor at low speed
-    Serial.println("The program has been interrupted");
-
-  onOff = true;
-}
- else
- { 
-   digitalWrite(7, LOW); //turns interrupt led off
-  digitalWrite(4, LOW); //spins dc motor at speed according to that of the temperature sensor
-   digitalWrite(8, LOW); //turns photoresistor led off
-
-   onOff = false;
- }
   
+}
+
+
+void loop()
+{
+ 
+    
+}
+
+
+ISR(PCINT2_vect) {
+  if(PIND & _BV(PIND2))
+  {
+    //TEMPERATURE SENSOR CODE
+    	int tempSense = analogRead(A0);	//sets the temperature sensor to the A0 port on the Arduino
+
+      //calculations below inspired by Arduino Project Hub. (n.d.). Arduino LED Temperature Indicator. [online] Available at: https://create.arduino.cc/projecthub/luca-mcloughlin/arduino-led-temperature-indicator-6874d9 [Accessed 16 Jul. 2021].
+      float tempVoltage = (tempSense / 1024.0) * 5.0;	//sets the value of the voltage
+      float tempInCelsius = (tempVoltage - .5) * 100;	//calculates temperature in Celsius
+
+      Serial.print("The temperature in Celsius is: ");	//prints the current temperature in celsius
+      Serial.println(tempInCelsius);
+
+      if (tempInCelsius <= coldTemp) {
+        digitalWrite(4, HIGH); //makes dc motor spin at low speed
+        digitalWrite(5, LOW); //turns red led off
+        digitalWrite(6, HIGH); //turns blue led on
+        Serial.println("COLD TEMPERATURE");
+      }
+      else if (tempInCelsius >= hotTemp) {
+        digitalWrite(4, LOW); //makes dc motor spin at high speed
+        digitalWrite(5, HIGH); //turns red led on
+        digitalWrite(6, LOW); //turns blue led off
+        Serial.println("HOT TEMPERATURE");
+      }
+      else if (tempInCelsius > coldTemp && tempInCelsius < hotTemp) {
+        digitalWrite(4, HIGH); //makes dc motor spin at low speed
+        digitalWrite(5, HIGH); //turns red led on
+        digitalWrite(6, HIGH); //turns blue led on
+        Serial.println("MEDIUM TEMPERATURE");
+      }
+      delay(100);
+    }
+    else
+    {
+      digitalWrite(7, HIGH); //turns interrupt led on
+      digitalWrite(4, HIGH); //spins dc motor at low speed
+      digitalWrite(5, LOW); //turns red led off
+      digitalWrite(6, LOW); //turns blue led off
+
+      Serial.println("The temperature sensor has been interrupted");
+    }
+  
+	
+  if(PIND & _BV(PIND3))
+  {
+    //LDR CODE
+    	int photoSense = analogRead(A1); //sets the photoresistor sensor to the A1 port on the Arduino
+
+      	digitalWrite(10, LOW);
+          Serial.print("The resistance of the photoresistor is: "); //prints the current resistance recorded by the photoresistor
+          Serial.println(photoSense);
+
+          if (photoSense >= 500) {
+            digitalWrite(8, HIGH);
+          }
+          else if (photoSense < 500)
+          {
+              digitalWrite(8, LOW);
+          }
+      delay(100); 
+  }
+  else
+  {
+  	digitalWrite(8, LOW);
+    digitalWrite(5, LOW);
+    digitalWrite(10, HIGH);
+    Serial.println("The photoresistor function has been interrupted");
+  }
 }
